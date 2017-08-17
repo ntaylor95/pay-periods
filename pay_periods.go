@@ -20,13 +20,15 @@ func main() {
 }
 
 
-func GetPayPeriodWeekly(payPeriodDate time.Time, payDateDow time.Weekday, delayed int, payPeriodEndDow time.Weekday) (time.Time, time.Time, time.Time) {
+func GetPayPeriodWeekly(processingDate time.Time, payDateDow time.Weekday, delayed int, payPeriodEndDow time.Weekday) (time.Time, time.Time, time.Time) {
 
 	//employee gets paid every week
 
-	//set the pay period end date to the date passed in
-	payPeriodEndDate := payPeriodDate
+	//default the pay period end date to the date passed in
+	payPeriodEndDate := processingDate
 
+	//if the payPeriodEndDate DOW = payPeriodEndDOW then we are done
+	//otherwise add a day to the payPeriodEndDate and try again
 	for (payPeriodEndDate.Weekday() != payPeriodEndDow) {
 		payPeriodEndDate = payPeriodEndDate.AddDate(0,0,1)
 	}
