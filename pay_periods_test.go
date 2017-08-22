@@ -14,9 +14,38 @@ var _ = Describe("pay_periods", func() {
 		fmt.Println("Starting Tests")
 	})
 
-	Describe("Employee is paid weekly", func() {
-		Context("a date is provided", func() {
-			It("return pay period end date and start date", func() {
+	Describe("Given the Pay Period Start Day of the Week (DOW)", func() {
+		Context("When a date is provided", func() {
+			It("Then return pay period start date", func() {
+				var flagtests = []struct {
+					processingDate time.Time
+					payPeriodStartDow time.Weekday
+					payPeriodStartDate time.Time
+				}{
+					{time.Date(int(2017), time.May, int(3), int(0), int(0), int(0), int(0), time.UTC), time.Saturday, time.Date(int(2017), time.April, int(29), int(0), int(0), int(0), int(0), time.UTC)},
+					{time.Date(int(2017), time.May, int(3), int(0), int(0), int(0), int(0), time.UTC), time.Tuesday, time.Date(int(2017), time.May, int(2), int(0), int(0), int(0), int(0), time.UTC)},
+					{time.Date(int(2017), time.July, int(4), int(0), int(0), int(0), int(0), time.UTC), time.Saturday, time.Date(int(2017), time.July, int(1), int(0), int(0), int(0), int(0), time.UTC)},
+					{time.Date(int(2017), time.July, int(4), int(0), int(0), int(0), int(0), time.UTC), time.Tuesday, time.Date(int(2017), time.July, int(4), int(0), int(0), int(0), int(0), time.UTC)},
+					{time.Date(int(2017), time.July, int(4), int(0), int(0), int(0), int(0), time.UTC), time.Sunday, time.Date(int(2017), time.July, int(2), int(0), int(0), int(0), int(0), time.UTC)},
+					{time.Date(int(2017), time.July, int(14), int(0), int(0), int(0), int(0), time.UTC), time.Sunday, time.Date(int(2017), time.July, int(9), int(0), int(0), int(0), int(0), time.UTC)},
+					{time.Date(int(2017), time.July, int(1), int(0), int(0), int(0), int(0), time.UTC), time.Tuesday, time.Date(int(2017), time.June, int(27), int(0), int(0), int(0), int(0), time.UTC)},
+				}
+
+				for _, tt := range flagtests {
+					_startDate := GetPayPeriodStartDate(tt.processingDate, tt.payPeriodStartDow)
+
+					fmt.Printf("\nInput: \n   Pay Period Date: %d \n   Pay Period Start DOW: %d", tt.processingDate.Format(time.RFC3339), tt.payPeriodStartDow)
+					fmt.Printf("\nOutput: \n   Pay Period Start Date: %d", _startDate.Format(time.RFC3339))
+
+					Expect(_startDate).To(Equal(tt.payPeriodStartDate))
+				}
+			})
+		})
+	})
+
+	Describe("Given Employee is paid weekly", func() {
+		Context("When a date is provided", func() {
+			It("Then return pay period end date and start date", func() {
 				var flagtests = []struct {
 					payPeriodDate time.Time
 					payDateDow time.Weekday

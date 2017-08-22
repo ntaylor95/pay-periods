@@ -20,21 +20,24 @@ func main() {
 }
 
 
-func GetPayPeriodWeekly(processingDate time.Time, payDateDow time.Weekday, delayed int, payPeriodEndDow time.Weekday) (time.Time, time.Time, time.Time) {
+//Calculate the Pay Period Start Date Based on a 7 day work week
+func GetPayPeriodStartDate(processingDate time.Time, payPeriodStartDow time.Weekday) time.Time {
+	payPeriodStartDate := processingDate;
 
-	//employee gets paid every week
-
-	//default the pay period end date to the date passed in
-	payPeriodEndDate := processingDate
-
-	//if the payPeriodEndDate DOW = payPeriodEndDOW then we are done
-	//otherwise add a day to the payPeriodEndDate and try again
-	for (payPeriodEndDate.Weekday() != payPeriodEndDow) {
-		payPeriodEndDate = payPeriodEndDate.AddDate(0,0,1)
+	//if the payPeriodStartDate DOW = payPeriodStartDow then we are done
+	//otherwise subtract a day from the payPeriodStartDate and try again
+	for (payPeriodStartDate.Weekday() != payPeriodStartDow) {
+		payPeriodStartDate = payPeriodStartDate.AddDate(0, 0, -1)
 	}
 
-	//calculate pay Period Start Date
-	payPeriodStartDate := payPeriodEndDate.AddDate(0,0,(1-DAYS_IN_A_WEEK))
+	return payPeriodStartDate
+}
+
+func GetPayPeriodEndDate(payPeriodStartDate time.Time, daysInPayPeriod int) time.Time {
+	return payPeriodStartDate.AddDate(0,0,daysInPayPeriod - 1)
+}
+
+func GetPayPeriodExpectedPayDate(payPeriodEndDate time.Time, payDateDow time.Weekday, delayed int) time.Time {
 
 	//set pay date to the pay period end date as the default
 	payPeriodPayDate := payPeriodEndDate
@@ -50,58 +53,49 @@ func GetPayPeriodWeekly(processingDate time.Time, payDateDow time.Weekday, delay
 		payPeriodPayDate = payPeriodPayDate.AddDate(0,0,delayed)
 	}
 
+	return payPeriodPayDate
+}
+
+
+func GetPayPeriodWeekly(processingDate time.Time, payPeriodStartDow time.Weekday, payDateDow time.Weekday, delayed int) (time.Time, time.Time, time.Time) {
+
+	//employee gets paid every week
+
+	//calculate pay Period Start Date
+	payPeriodStartDate := GetPayPeriodStartDate(processingDate, payPeriodStartDow);
+
+	//calculate pay Period End Date
+	payPeriodEndDate := GetPayPeriodEndDate(payPeriodStartDate, DAYS_IN_A_WEEK);
+
+	//calculate pay Period Expected Pay date
+	payPeriodPayDate := GetPayPeriodExpectedPayDate(payPeriodEndDate, payDateDow, delayed)
+
 	return payPeriodStartDate, payPeriodEndDate, payPeriodPayDate
 }
 
-func GetPayPeriodBiWeekly(payPeriodDate time.Time, delayed bool, biWeeklyOddEven string, payDateDow int) (time.Time, time.Time, time.Time) {
+func GetPayPeriodBiWeekly(processingDate time.Time, payPeriodStartDow time.Weekday, hireDate time.Time, payDateDow time.Weekday, delayed int) (time.Time, time.Time, time.Time) {
 
 	//employee gets paid every 2 weeks
 
-	payPeriodDaysStartFactor := DAYS_IN_A_WEEK
-	payPeriodDaysEndFactor := DAYS_IN_A_WEEK
+	//calculate pay Period Start Date based on 7 days in pay period
+	payPeriodStartDate := GetPayPeriodStartDate(processingDate, payPeriodStartDow);
 
-	payPeriodDateOddEven := GetOddEvenDate(payPeriodDate)
-
-	//Determine the start day of the week and the end day of the week
-	//for the pay period - default is Monday thru Sunday
-	payPeriodOffset := -2 //Friday is the last day of the pay period
-	//payPeriodOffset = 0 //Sunday is last day of the pay period week
-
-	//if hireDate is ODD, and payPeriodDate is ODD then 1st week of pay period
-	//if hireDate is ODD and payPeriodDate is EVEN then 2nd week of the pay period
+	//if hireDate is ODD, and payPeriodStartDate is ODD then 1st week of pay period
+	//if hireDate is ODD and payPeriodStartDate is EVEN then 2nd week of the pay period
 	//conversly
-	//if hireDate is EVEN, and payPeriodDate is EVEN then 1st week of pay period
-	//if hireDate is EVEN and payPeriodDate is ODD, then 2nd week of pay period
-	payPeriodDow := int(payPeriodDate.Weekday())
+	//if hireDate is EVEN, and payPeriodStartDate is EVEN then 1st week of pay period
+	//if hireDate is EVEN and payPeriodStartDate is ODD, then 2nd week of pay period
+	payPeriodStartDateOddEven := GetOddEvenDate(payPeriodStartDate)
+	hireDateOddEven := GetOddEven(hireDate);
 
-	if payPeriodDateOddEven == biWeeklyOddEven {
-		payPeriodDaysStartFactor = (payPeriodDow - 1 - payPeriodOffset)
-		payPeriodDaysEndFactor = 2 * DAYS_IN_A_WEEK - payPeriodDow + payPeriodOffset
-	} else {
-		payPeriodDaysStartFactor = (payPeriodDow - 1) + DAYS_IN_A_WEEK - payPeriodOffset
-		payPeriodDaysEndFactor = DAYS_IN_A_WEEK - payPeriodDow + payPeriodOffset
+	if payPeriodStartDateOddEven != hireDateOddEven {
+		payPeriodStartDate = payPeriodStartDate.AddDate(0,0,-DAYS_IN_A_WEEK)
 	}
 
-	payPeriodStartDate := payPeriodDate.AddDate(0, 0, -(payPeriodDaysStartFactor))
-	payPeriodEndDate := payPeriodDate.AddDate(0, 0, payPeriodDaysEndFactor)
+	payPeriodEndDate := GetPayPeriodEndDate(payPeriodStartDate, 2*DAYS_IN_A_WEEK);
 
-	//set pay date to the pay period end date as the default
-	payPeriodPayDate := payPeriodEndDate
-
-	//set the pay day day of the week - the default would be Sunday = 7
-	//payDateDow := 5 //PayDate of Friday
-
-	//if the default pay date day of the week does not match the pay date day of the week
-	//we need to calculate a new pay date
-	if (payDateDow != int(payPeriodEndDate.Weekday())) {
-		payDateOffset := DAYS_IN_A_WEEK-payDateDow
-		payPeriodPayDate = payPeriodEndDate.AddDate(0, 0, -(payDateOffset))
-	}
-
-	//if the pay date is delayed and NOT advanced
-	if delayed {
-		payPeriodPayDate = payPeriodPayDate.AddDate(0, 0, DAYS_IN_A_WEEK)
-	}
+	//calculate pay Period Expected Pay date
+	payPeriodPayDate := GetPayPeriodExpectedPayDate(payPeriodEndDate, payDateDow, delayed)
 
 	return payPeriodStartDate, payPeriodEndDate, payPeriodPayDate
 }
