@@ -100,7 +100,7 @@ func GetPayPeriodBiWeekly(processingDate time.Time, payPeriodStartDow time.Weekd
 	return payPeriodStartDate, payPeriodEndDate, payPeriodPayDate
 }
 
-func GetPayPeriodSemiMonthly(payPeriodDate time.Time, delayed bool, payDateDow int) (time.Time, time.Time, time.Time) {
+func GetPayPeriodSemiMonthly(processingDate time.Time, payDateDow int, delayed bool) (time.Time, time.Time, time.Time) {
 
 	//employee gets paid on fixed days in the month, the 1st and 15th
 	var payPeriodStartDate time.Time
@@ -109,45 +109,18 @@ func GetPayPeriodSemiMonthly(payPeriodDate time.Time, delayed bool, payDateDow i
 	semiMonthlyDomStart := 1
 	semiMonthlyDomEnd := 15
 
-	payPeriodDom := payPeriodDate.Day()
+	payPeriodDom := processingDate.Day()
 
+	//check if processingDate is after the 15th, in which case we are in 2nd hal;f of the month
 	if (payPeriodDom > semiMonthlyDomEnd) {
-		semiMonthlyDomStart = semiMonthlyDomEnd + 1
-		semiMonthlyDomEnd = GetDaysInMonth(payPeriodDate)
+		semiMonthlyDomStart = semiMonthlyDomEnd + 1 //will always be 16
+		semiMonthlyDomEnd = GetDaysInMonth(processingDate) //will always be last day of the month
 	}
 
-	payPeriodStartDate = time.Date(payPeriodDate.Year(), payPeriodDate.Month(), semiMonthlyDomStart, 0, 0, 0, 0, time.UTC)
-	payPeriodEndDate = time.Date(payPeriodDate.Year(), payPeriodDate.Month(), semiMonthlyDomEnd, 0, 0, 0, 0, time.UTC)
+	payPeriodStartDate = time.Date(processingDate.Year(), processingDate.Month(), semiMonthlyDomStart, 0, 0, 0, 0, time.UTC)
+	payPeriodEndDate = time.Date(processingDate.Year(), processingDate.Month(), semiMonthlyDomEnd, 0, 0, 0, 0, time.UTC)
 
-	//---------------------------------
-	payPeriodPayDate := payPeriodEndDate
-
-	//set the pay day day of the week - the default would be Sunday = 7
-	//payDateDow
-
-	//if the default pay date day of the week does not match the pay date day of the week
-	//we need to calculate a new pay date
-	payPeriodEndDateDow := int(payPeriodEndDate.Weekday())
-	var payDateOffset int
-	fmt.Println("Pay dates DOWS", payPeriodEndDateDow, payDateDow)
-	if (int(payDateDow) != payPeriodEndDateDow) {
-		if (payDateDow < payPeriodEndDateDow) {
-			//pay period ends on a Saturday but we want to pay them on a Friday
-			payDateOffset = payPeriodEndDateDow - payDateDow
-		} else {
-			//pay period end date is on a Monday {1} but we want to pay them on Friday {5}
-			payDateOffset = DAYS_IN_A_WEEK - payDateDow + payPeriodEndDateDow
-		}
-
-		fmt.Println("pay period offset", payDateOffset)
-		payPeriodPayDate = payPeriodEndDate.AddDate(0, 0, -(payDateOffset))
-	}
-
-	//if the pay date is delayed and NOT advanced
-	if delayed {
-		payPeriodPayDate = payPeriodPayDate.AddDate(0, 0, DAYS_IN_A_WEEK)
-	}
-
+	payPeriodPayDate := GetPayPeriodExpectedPayDate(payPeriodEndDate, payDateDow, delayed)
 
 	return payPeriodStartDate, payPeriodEndDate, payPeriodPayDate
 }
